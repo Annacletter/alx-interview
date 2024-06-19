@@ -6,18 +6,42 @@ const movieId = process.argv[2];
 
 const url = `https://swapi-api.hbtn.io/api/films/${movieId}`;
 
-request(url, async (err, res, body) => {
-  err && console.log(err);
+request(url, (err, res, body) => {
+  if (err) {
+    console.error(`Error fetching movie details: ${err}`);
+    return;
+  }
 
-  const charactersArray = (JSON.parse(res.body).characters);
-  for (const character of charactersArray) {
-    await new Promise((resolve, reject) => {
-      request(character, (err, res, body) => {
-        err && console.log(err);
+  if (res.statusCode !== 200) {
+    console.error(`Failed to fetch movie details. Status code: ${res.statusCode}`);
+    return;
+  }
 
-        console.log(JSON.parse(body).name);
-        resolve();
+  try {
+    const filmData = JSON.parse(body);
+    const charactersArray = filmData.characters;
+
+    charactersArray.forEach(characterUrl => {
+      request(characterUrl, (err, res, body) => {
+        if (err) {
+          console.error(`Error fetching character details: ${err}`);
+          return;
+        }
+
+        if (res.statusCode !== 200) {
+          console.error(`Failed to fetch character details. Status code: ${res.statusCode}`);
+          return;
+        }
+
+        try {
+          const characterData = JSON.parse(body);
+          console.log(characterData.name);
+        } catch (error) {
+          console.error(`Error parsing character JSON: ${error}`);
+        }
       });
     });
+  } catch (error) {
+    console.error(`Error parsing movie JSON: ${error}`);
   }
 });
