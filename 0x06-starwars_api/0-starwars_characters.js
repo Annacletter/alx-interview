@@ -1,47 +1,39 @@
 #!/usr/bin/node
-
-const request = require('request');
-
-const movieId = process.argv[2];
-
-const url = `https://swapi-api.hbtn.io/api/films/${movieId}`;
-
-request(url, (err, res, body) => {
-  if (err) {
-    console.error(`Error fetching movie details: ${err}`);
-    return;
-  }
-
-  if (res.statusCode !== 200) {
-    console.error(`Failed to fetch movie details. Status code: ${res.statusCode}`);
-    return;
-  }
-
-  try {
-    const filmData = JSON.parse(body);
-    const charactersArray = filmData.characters;
-
-    charactersArray.forEach(characterUrl => {
-      request(characterUrl, (err, res, body) => {
-        if (err) {
-          console.error(`Error fetching character details: ${err}`);
-          return;
-        }
-
-        if (res.statusCode !== 200) {
-          console.error(`Failed to fetch character details. Status code: ${res.statusCode}`);
-          return;
-        }
-
-        try {
-          const characterData = JSON.parse(body);
-          console.log(characterData.name);
-        } catch (error) {
-          console.error(`Error parsing character JSON: ${error}`);
-        }
-      });
+/**
+ * makeRequest - Wrapper function that performs an HTTP GET request to a specified URL.
+ *
+ * @param {String} url - The URL to fetch data from.
+ * @returns {Promise} - A Promise that resolves with the parsed JSON response or rejects with an error.
+ */
+function makeRequest(url) {
+  const request = require('request');
+  return new Promise((resolve, reject) => {
+    request.get(url, (error, response, body) => {
+      if (error) reject(error);
+      else resolve(JSON.parse(body));
     });
-  } catch (error) {
-    console.error(`Error parsing movie JSON: ${error}`);
+  });
+}
+
+/**
+ * main - Entry point of the script. Makes requests to Star Wars API for movie info
+ *        based on the movie ID passed as a command-line parameter.
+ *        Retrieves movie character info and prints their names in order of appearance.
+ */
+async function main() {
+  const args = process.argv;
+
+  if (args.length < 3) return;
+
+  const movieUrl = 'https://swapi-api.alx-tools.com/api/films/' + args[2];
+  const movie = await makeRequest(movieUrl);
+
+  if (!movie.characters) return;
+  for (const characterUrl of movie.characters) {
+    const character = await makeRequest(characterUrl);
+    console.log(character.name);
   }
-});
+}
+
+main();
+
